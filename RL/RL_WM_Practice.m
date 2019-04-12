@@ -388,7 +388,7 @@ for depth=1:maxdepth
     idx=find(chistseq==chistseq(end) & rhistseq==rhistseq(end));
     idx=idx(1:end-1);
     if isempty(idx), continue; end
-    countRight=sum(data(idx,1));
+    countRight=sum(data(idx,1)); 
     countN=length(idx);
     
     pRightBias=1-binocdf(countRight-1,countN,0.5);
