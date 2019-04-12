@@ -4,8 +4,7 @@ AssertOpenGL;
 KbName('KeyNamesWindows');
 KbCheck;
 thisdir = pwd;
-s = RandStream.create('mt19937ar','seed',sum(100*clock));
-RandStream.setGlobalStream(s);
+
 %Set higher DebugLevel, so that you don't get all kinds of messages flashed
 %at you each time you start the experiment:
 olddebuglevel=Screen('Preference', 'VisualDebuglevel', 3);
@@ -19,12 +18,15 @@ datadirname = fullfile(thisdir,'data',num2str(observer));
 if ~isdir(datadirname)
     mkdir(datadirname);
 end
-Data.filename=fullfile(datadirname,['practice' num2str(observer)]);
-Data.filename2=fullfile(datadirname,['history' num2str(observer)]);
+Data.filename=fullfile(datadirname,['Subj' num2str(observer)]);
+filename2=fullfile(datadirname,['ValidTrials' num2str(observer)]);
+figfilename= fullfile(datadirname,['Fig' num2str(observer)]);
 try
     %% Data struct setup
-    numTrial=5;
-    Data.stimulus.responseWindowDur=1;
+    Data.stimulus.numTrial = 5; %enter number of valid trials expected to be accomplished
+    Data.stimulus.maxExpDur = 5; %enter number of minutes allowed for experiment
+    
+    Data.stimulus.responseWindowDur=.5; 
     Data.stimulus.choiceDur=.5;
     Data.stimulus.ITIlong = 5;
     Data.stimulus.ITIshort = 1;
@@ -69,41 +71,36 @@ try
         'given two rectangles on the screen.\n\n' ...
         '  Press  1  if you want to choose the left one.\n' ...
         '  Press  2  if you want to choose the right one.\n' ...
-        'You will begin with ' num2str(numTrial) ' training trials\n\n' ...
+        'You will begin with ' num2str(Data.stimulus.numTrial) ' training trials\n\n' ...
         '      (Press any key to start training)\n' ];
     % Draw 'myText', centered in the display window:
     DrawFormattedText(windowRect, IntroText, 'center', 'center', white);
     % Show the drawn text at next display refresh cycle:
     Screen('Flip', windowRect);
-    Data.ExpStartTime=datevec(now);
     % Wait for key stroke. This will first make sure all keys are
     % released, then wait for a keypress and release:
     KbWait([], 3);
-    n = 1;
-    elapsedTimeExp=etime(datevec(now),Data.ExpStartTime);
-    while elapsedTimeExp<1*60
-        while n <= numTrial
+    Data.ExpStartTime=datevec(now);
+    n = 1; % Number(n) increment, for the full choice history
+    validtrials = 0; % Number of valid trials
+    while etime(datevec(now),Data.ExpStartTime) < Data.stimulus.maxExpDur*60  
+        if validtrials < Data.stimulus.numTrial
             trial = n;
-            %% Exclude missed trial from algorithem (data)
-            %         if trial > 1 && isnan(data(trial-1,1))
-            %             n = trial - 1;
-            %         else
-            %             n = trial;
-            %         end
             %% Generate correct ans with matching pannies algorithm
             [computerChoice,pComputerRight,biasInfo]=matching_pennies(data,maxdepth,alpha);
             Data.CompChoice(trial) = computerChoice;
             Data.pCompRight(trial) = pComputerRight;
             Data.biasInfo(trial,1:4) = biasInfo;
-            Data.trialTime(trial).TrialStartTime=datevec(now);
             %% Fixation oval
             Screen('FillOval', windowRect,white,[window(3)/2-20 window(4)/2-20 window(3)/2+20 window(4)/2+20]);
             Screen('Flip',windowRect);
+            Data.trialTime(trial).TrialStartTime=datevec(now);
             Data.trialTime(trial).FixStartTime=datevec(now);
+            
             WaitSecs(0.5);
             Data.trialTime(trial).FixEndTime=datevec(now);
             Data.trialTime(trial).FixDuration=etime(datevec(now),Data.trialTime(trial).FixStartTime);
-            %% Blue rectangle stimulus
+            %% Scample - Blue rectangle stimulus
             % Screen X positions of our three rectangles
             squareXpos = [screenXpixels * 0.25 screenXpixels * 0.75];
             numSqaures = length(squareXpos);
@@ -118,11 +115,10 @@ try
             
             Data.trialTime(trial).StimStartTime=datevec(now);
             elapsedTime=etime(datevec(now),Data.trialTime(trial).StimStartTime);
-            while elapsedTime<Data.stimulus.responseWindowDur
+            while elapsedTime<=Data.stimulus.responseWindowDur
                 [keyisdown, secs, keycode, deltaSecs] = KbCheck;
                 if keyisdown && (keycode(KbName('2@')) || keycode(KbName('1!')))
                     elapsedTime=etime(datevec(now),Data.trialTime(trial).StimStartTime);
-                    % Data.trialTime(trial).ReactTime=etime(datevec(now),Data.trialTime(trial).StimStartTime);
                     break
                 end
                 elapsedTime=etime(datevec(now),Data.trialTime(trial).StimStartTime);
@@ -206,25 +202,59 @@ try
             else
                 WaitSecs(Data.stimulus.ITIshort);
             end
+            
+            %% Clock
             Data.trialTime(trial).TrialEndTime=datevec(now);
             Data.trialTime(trial).TrialDuration=etime(datevec(now),Data.trialTime(trial).TrialStartTime);
-            
+            Data.trialTime(trial).elapsedTimeExp=etime(datevec(now),Data.ExpStartTime);
             %% Add to choice and reward history
-            data(trial,1)=Data.choice(trial);
-            data(trial,2)=Data.reward(trial);
-            %% Trial increment
-            if isnan(data(trial,1))
-                n = trial;
-            else
-                n = n + 1;
-            end
-        end % end of trials' while loop
+            data(1:n,1)=Data.choice(:);
+            data(1:n,2)=Data.reward(:);
+            %% remove invalid trials and count number of valid trials
+            data=rmmissing(data);
+            validtrials = sum(~isnan(data(:,1)));
+            %% Data visualization
+            Data.sum(n).miss=sum(isnan(Data.choice(:)));
+            Data.sum(n).left=sum(Data.choice(:)==0);
+            Data.sum(n).right=sum(Data.choice(:)==1);
+            Data.sum(n).reward=sum(rmmissing(Data.reward(:)));      
+            %% Increment, for the full choice history
+            n = n+1;  
+        else
+            break
+        end % end of trials loop
     end % end of experimen time control while loop
-    % Data=experimentSummary(Data);
     Data.ExpEndTime=datevec(now);
-    Data.ExpDur=etime(datevec(now),Data.PracticeStartTime);
+    Data.ExpDur=etime(datevec(now),Data.ExpStartTime);
+    %% plot cumulative choice and reward history graph
+    Time = struct2dataset(Data.trialTime(:));
+    Result = struct2dataset(Data.sum(:));
+    x=Time(:,19);
+    xMax=Data.ExpDur;
+    reward=Result(:,4);
+    Fig.One = figure;
+    plot(x,reward,'color',[0.8500 0.3250 0.0980])
+    hold on
+    plot(x,Result(:,1),'color',[0 0.4470 0.7410])
+    plot(x,Result(:,2),'color',[0.4660 0.6740 0.1880])
+    plot(x,Result(:,3),'color',[0.6350 0.0780 0.1840])
+    drawnow
+    title('Cumulative Choice and Reward vs. Elapsed Time')
+    legend('Reward','Missed','Left','Right')
+    hold off
+    %% Save data and graph
     save(Data.filename,'Data')
-    save(Data.filename2,'data')
+    save(filename2,'data')
+    save(figfilename,'Fig')
+    Screen('TextSize', windowRect, 36);
+    % This is our intro text. The '\n' sequence creates a line-feed:
+    IntroText = ['This is the end.\n\nYou won ' num2str(sum(data(:,2))*5) ' points.\n\nThanks for participating!'];
+    % Draw 'myText', centered in the display window:
+    DrawFormattedText(windowRect, IntroText, 'center', 'center', [255 255 255]);
+    % Show the drawn text at next display refresh cycle:
+    Screen('Flip', windowRect);
+    %WaitSecs(3);
+    KbWait([],3);
     %eval(sprintf('save %s.mat Data',Data.filename))
     Screen('CloseAll')
 catch
