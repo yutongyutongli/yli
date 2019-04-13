@@ -94,10 +94,13 @@ try
             %% Fixation oval
             Screen('FillOval', windowRect,white,[window(3)/2-20 window(4)/2-20 window(3)/2+20 window(4)/2+20]);
             Screen('Flip',windowRect);
+            
+            %Clock
             Data.trialTime(trial).TrialStartTime=datevec(now);
             Data.trialTime(trial).FixStartTime=datevec(now);
             
             WaitSecs(0.5);
+            %Clock
             Data.trialTime(trial).FixEndTime=datevec(now);
             Data.trialTime(trial).FixDuration=etime(datevec(now),Data.trialTime(trial).FixStartTime);
             %% Scample - Blue rectangle stimulus
@@ -112,8 +115,9 @@ try
             % Draw blue rectangles to the screen
             Screen('FillRect', windowRect, RectColor, Rects);
             Screen('Flip', windowRect);
-            
+            % Clock
             Data.trialTime(trial).StimStartTime=datevec(now);
+            
             elapsedTime=etime(datevec(now),Data.trialTime(trial).StimStartTime);
             while elapsedTime<=Data.stimulus.responseWindowDur
                 [keyisdown, secs, keycode, deltaSecs] = KbCheck;
@@ -123,6 +127,8 @@ try
                 end
                 elapsedTime=etime(datevec(now),Data.trialTime(trial).StimStartTime);
             end
+            
+            % Clock
             Data.trialTime(trial).StimEndTime = datevec(now);
             Data.trialTime(trial).StimDuration = elapsedTime;
             %% Decision response
@@ -154,8 +160,12 @@ try
             Screen('FillRect', windowRect, RectColor, Rects);
             % Flip to the screen
             Screen('Flip', windowRect);
+            % Clock
             Data.trialTime(trial).RespStartTime=datevec(now);
+            
             WaitSecs(0.5);
+            
+            % Clock
             Data.trialTime(trial).RespEndTime=datevec(now);
             %% CFI
             Screen('FillOval', windowRect,white,[window(3)/2-20 window(4)/2-20 window(3)/2+20 window(4)/2+20]);
@@ -188,8 +198,12 @@ try
             
             DrawFormattedText(windowRect, RewardText, 'center', 'center',[255 255 0]);
             Screen('Flip', windowRect);
+            %Clock
             Data.trialTime(trial).FbackStartTime=datevec(now);
+            
             WaitSecs(Data.stimulus.feedbackDur);
+            
+            %Clock
             Data.trialTime(trial).FbackEndTime=datevec(now);
             Data.trialTime(trial).FbackDuration=etime(datevec(now),Data.trialTime(trial).FbackStartTime);
             %% ITI delay
