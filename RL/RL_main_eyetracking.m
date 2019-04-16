@@ -1,3 +1,5 @@
+clc;
+clear;
 %% Subject number
 prompt = 'What is the observer number?';
 observer = input(prompt);
@@ -57,7 +59,7 @@ disp('Calibration workflow stopped');
 %% 0. If no argument is used, run practice and abort
 if exist('observer', 'var')
   tetio_startTracking;
-  RL_WM_Practice(observer);
+  RL_WM_Practice_eyetracking(observer);
   
   % leave the stop tracking here for now, change location depend on
   % experiment design

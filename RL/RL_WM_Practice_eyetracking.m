@@ -4,7 +4,7 @@ function RL_WM_Practice(observer)
 Screen('Preference', 'SkipSyncTests', 1);
 %Screen('Preference', 'SkipSyncTests', 0)
 KbName('KeyNamesWindows');
-KbCheck;
+KbCheck(-2);
 thisdir = pwd;
 
 %Set higher DebugLevel, so that you don't get all kinds of messages flashed
@@ -26,7 +26,7 @@ figfilename= fullfile(datadirname,['Fig' num2str(observer)]);
 try
     %% Data struct setup
     Data.stimulus.numTrial = 2; %enter number of valid trials expected to be accomplished
-    Data.stimulus.maxExpDur = 5; %enter number of minutes allowed for experiment
+    Data.stimulus.maxExpDur = 1; %enter number of minutes allowed for experiment
     
     Data.stimulus.responseWindowDur=.5; 
     Data.stimulus.choiceDur=.5;
@@ -38,9 +38,7 @@ try
     Data.date=datestr(now,'yyyymmddTHHMMSS');
     Data.choice = nan;
     Data.reward = nan;
-    leftEyeAll = [];
-    rightEyeAll = [];
-    timeStampAll = [];
+    
     %% Initiate data matrix; set alpha level and depth
     %data = [];
     data(1,1:2) = nan;
@@ -91,6 +89,10 @@ try
     while etime(datevec(now),Data.ExpStartTime) < Data.stimulus.maxExpDur*60  
         if validtrials < Data.stimulus.numTrial
             trial = n
+            Gaze = [];
+            leftEyeAll = [];
+            rightEyeAll = [];
+            timeStampAll = [];
             %% Generate correct ans with matching pannies algorithm
             [computerChoice,pComputerRight,biasInfo]=matching_pennies(data,maxdepth,alpha);
             Data.CompChoice(trial) = computerChoice;
@@ -131,11 +133,11 @@ try
             Data.trialTime(trial).StimEndTime = datevec(now);
             Data.trialTime(trial).StimDuration = elapsedTime;
             %% Decision response
-            if keyisdown && keycode(KbName('1!'))
+            if keyisdown && keycode(KbName('1'))
                 Data.choice(trial)= 0;
                 ChoiceRectSize = [0 0 150 250];
                 fbsquareXpos = [screenXpixels * 0.25];
-            elseif keyisdown && keycode(KbName('2@'))
+            elseif keyisdown && keycode(KbName('2'))
                 Data.choice(trial)= 1;
                 ChoiceRectSize = [0 0 150 250];
                 fbsquareXpos = [screenXpixels * 0.75];
@@ -194,7 +196,7 @@ try
             DrawFormattedText(windowRect, RewardText, 'center', 'center',[255 255 0]);
             Screen('Flip', windowRect);
             Data.trialTime(trial).FbackStartTime=datevec(now);            
-            Data.trialTime(trial).FbackDuration=etime(datevec(now),Data.trialTime(trial).FbackStartTime);
+            %% Collect eye tracking data
             [leftEyeAll, rightEyeAll, timeStampAll] = DataCollect(0.5,0.001);
             if ( etime(datevec(now),Data.trialTime(trial).FbackStartTime) < Data.stimulus.feedbackDur)  
             [lefteye, righteye, timestamp, trigSignal] = tetio_readGazeData;
@@ -213,12 +215,71 @@ try
             Data.gazeR = rightEyeAll;
             %Data.TimeStamp(trial)={timeStampAll};
             Data.gazeT = timeStampAll;
-            csvwrite('gazedataleft.csv', leftEyeAll);
+            %             csvwrite('gazedataleft.csv', leftEyeAll);
             %             csvwrite('gazedataright.csv', rightEyeAll);
             %             csvwrite('gazedatatime.csv', timeStampAll);
-            
+            %% Fback stimulus Timer
             WaitSecs(Data.stimulus.feedbackDur);
-            Data.trialTime(trial).FbackEndTime=datevec(now);
+            Data.trialTime(trial).FbackDuration=etime(datevec(now),Data.trialTime(trial).FbackStartTime);
+            Data.trialTime(trial).FbackEndTime=datevec(now); 
+            %% Check gazedata validity, abandon trial if invalid
+            Gaze(:,1) = Data.gazeL(:,7);
+            Gaze(:,3) = Data.gazeL(:,8);
+            Gaze(:,2) = Data.gazeR(:,7);
+            Gaze(:,4) = Data.gazeR(:,8);
+            
+        
+            Gaze(Gaze(:,1) < 0, :)=[];
+            Gaze(Gaze(:,2) < 0, :)=[];
+            Gaze(Gaze(:,3) < 0, :)=[];
+            Gaze(Gaze(:,4) < 0, :)=[];
+            
+            Gaze(:,1:2) = round(Gaze(:,1:2)*1920);
+            Gaze(:,3:4) = round(Gaze(:,3:4)*1080);
+            
+            Gaze(Gaze(:,1) > 1920, :)=[];
+            Gaze(Gaze(:,2) > 1920, :)=[];
+            Gaze(Gaze(:,3) > 1080, :)=[];
+            Gaze(Gaze(:,4) > 1080, :)=[];
+            
+            Gaze
+            
+            Matrix=zeros(1920,1080);
+            VisMatrix = zeros(1920,1080);
+            for i = 1:length(Gaze)
+                xl = Gaze(i,1);
+                yl = Gaze(i,3);
+                xr = Gaze(i,2);
+                yr = Gaze(i,4);
+                Matrix(xl,yl) = Matrix(xl,yl) + 1;
+                Matrix(xr,yr) = Matrix(xr,yr) + 1;
+                VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) = VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) + 1;
+                VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) = VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) + 1;
+            end
+            Vind = find(Matrix >= 1);
+            
+            % valid vision field
+            r=100;
+            C = Ellipse(r,r*pi);
+            Csize = size(C);
+            CirMatrix = zeros(1920,1080);
+            % find coordinates on Matrix to place circle at
+            x1 = 1920/2-floor(Csize(1)/2)+1;
+            x2 = 1920/2+ceil(Csize(1)/2);
+            y1 = 1080/2-floor(Csize(2)/2)+1;
+            y2 = 1080/2+ceil(Csize(2)/2);
+            % Place circle into Matrix
+            CirMatrix(x1:x2,y1:y2) = C;
+            Cind = find(CirMatrix == 1);
+            imagesc(CirMatrix)
+            %
+            ValidCount = size(intersect(Vind,Cind));
+            if (ValidCount/2) > (length(Gaze)*0.3)
+                Data.choice(trial) = Data.choice(trial);
+            else
+                Data.choice(trial)= nan;
+            end
+
             %% ITI delay
             Screen('FillOval', windowRect,white,[window(3)/2-20 window(4)/2-20 window(3)/2+20 window(4)/2+20]);
             Screen('Flip', windowRect);
@@ -248,7 +309,13 @@ try
             Data.sum(n).miss=sum(isnan(Data.choice(:)));
             Data.sum(n).left=sum(Data.choice(:)==0);
             Data.sum(n).right=sum(Data.choice(:)==1);
-            Data.sum(n).reward=sum(rmmissing(Data.reward(:)));      
+            Data.sum(n).reward=sum(rmmissing(Data.reward(:))); 
+            % Gaze heat map per trial
+            Fig.TrialFbackGaze(n) = figure;
+            axis ([0 1920 0 1080])
+            imagesc(VisMatrix)
+            axis ij
+            
             %% Increment, for the full choice history
             n = n+1;  
         else
@@ -262,7 +329,7 @@ try
     Result = struct2dataset(Data.sum(:));
     x=Time(:,19);
     reward=Result(:,4);
-    Fig.One = figure;
+    Fig.ExpChoice = figure;
     plot(x,reward,'color',[0.8500 0.3250 0.0980])
     hold on
     plot(x,Result(:,1),'color',[0 0.4470 0.7410])

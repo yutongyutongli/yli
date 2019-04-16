@@ -1,0 +1,9 @@
+Image size: 1280 X 1024
+Bar size: 220 X 460
+Occluser size: 286 X ***
+Pattern picture size: 286 X 110
+
+Planned:
+light grey RGB 179, 70%
+middle grey: RGB 128, 50%
+dark grey: RGB 77, 30%
