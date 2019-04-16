@@ -211,9 +211,9 @@ try
             timeStampAll = vertcat(timeStampAll, timestamp(:,1));
             end
             
-            Data.gazeL(n) = leftEyeAll;
-            Data.gazeR(n) = rightEyeAll;
-            Data.gazeT(n) = timeStampAll;
+            Data.gazeL = leftEyeAll;
+            Data.gazeR = rightEyeAll;
+            Data.gazeT = timeStampAll;
             
             %             csvwrite('gazedataleft.csv', leftEyeAll);
             %             csvwrite('gazedataright.csv', rightEyeAll);
@@ -223,8 +223,8 @@ try
             Data.trialTime(trial).FbackDuration=etime(datevec(now),Data.trialTime(trial).FbackStartTime);
             Data.trialTime(trial).FbackEndTime=datevec(now); 
             %% Check gazedata validity, abandon trial if invalid
-            [ValidCount, VisMatrix, Matrix] = gazevaliditycheck(Data.gazeL(n),Data.gazeR(n));
-            Data.gazeMatrix(n).Matrix = Matrix;
+            [ValidCount, VisMatrix, Matrix] = gazevaliditycheck(Gaze);
+            Data.gazeMatrix(trial).Matrix = Matrix;
             if (ValidCount/2) > (length(Gaze)*0.3)
                 Data.choice(trial) = Data.choice(trial);
             else

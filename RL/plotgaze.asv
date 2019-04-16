@@ -32,7 +32,7 @@ for i = 1:length(Gaze)
     yr = Gaze(i,4);
     Matrix(xl,yl) = Matrix(xl,yl) + 1;
     Matrix(xr,yr) = Matrix(xr,yr) + 1;
-    if ((xl + 3) && (xr + 3) <= 1920) && ((yl + 3)&&(yr + 3)<=1080) && ((xl - 3) && (xr - 3) > 0) && ((yl - 3)&&(yr - 3)>0)
+    if ((xl + 3) && (xr + 3) <= 1920) && ((yl + 3)&&(yr + 3)<=1080)
         VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) = VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) + 1;
         VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) = VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) + 1;
     else
@@ -47,31 +47,31 @@ axis ([0 1920 0 1080])
 imagesc(VisMatrix)
 
 axis ij
-hold on
+% hold on
 
 
 
 
-x=80;
-C = Ellipse(x,x*pi);
-Csize = size(C);
-CirMatrix = zeros(1920,1080);
-% find coordinates on Matrix to place circle at
-x1 = 1920/2-floor(Csize(1)/2)+1;
-x2 = 1920/2+ceil(Csize(1)/2);
-y1 = 1080/2-floor(Csize(2)/2)+1;
-y2 = 1080/2+ceil(Csize(2)/2);
-% Place circle into Matrix
-VisMatrix(x1:x2,y1:y2) = C;
-CirMatrix(x1:x2,y1:y2) = C;
-Cind = find(CirMatrix == 1);
-
-% ValidCount = size(intersect(Vind,Cind));
-% if ValidCount/2 > length(Gaze)/2
-% else
-% end
-
-imagesc(VisMatrix)
+% x=80;
+% C = Ellipse(x,x*pi);
+% Csize = size(C);
+% CirMatrix = zeros(1920,1080);
+% % find coordinates on Matrix to place circle at
+% x1 = 1920/2-floor(Csize(1)/2)+1;
+% x2 = 1920/2+ceil(Csize(1)/2);
+% y1 = 1080/2-floor(Csize(2)/2)+1;
+% y2 = 1080/2+ceil(Csize(2)/2);
+% % Place circle into Matrix
+% VisMatrix(x1:x2,y1:y2) = C;
+% CirMatrix(x1:x2,y1:y2) = C;
+% Cind = find(CirMatrix == 1);
+% 
+% % ValidCount = size(intersect(Vind,Cind));
+% % if ValidCount/2 > length(Gaze)/2
+% % else
+% % end
+% axis ([0 1920 0 1080])
+% imagesc(VisMatrix)
 
 
 
