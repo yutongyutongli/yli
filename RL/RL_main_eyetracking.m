@@ -4,6 +4,7 @@ clear;
 prompt = 'What is the observer number?';
 observer = input(prompt);
 %% Calibrating Eye Tracker
+% addpath('C:\Program Files\MATLAB\R2019a\toolbox\tobiisdk\tetio')
 addpath('eye-tracking');
 addpath('eye-tracking/functions');
 addpath('eye-tracking/tetio');  
@@ -41,7 +42,7 @@ fprintf('Frame rate: %d Hz.\n', currentFrameRate);
 % *************************************************************************
 %
 % Calibration of a participant
-%
+%454545
 % *************************************************************************
 
 SetCalibParams; 

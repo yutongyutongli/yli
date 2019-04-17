@@ -25,8 +25,8 @@ filename2=fullfile(datadirname,['ValidTrials' num2str(observer)]);
 figfilename= fullfile(datadirname,['Fig' num2str(observer)]);
 try
     %% Data struct setup
-    Data.stimulus.numTrial = 2; %enter number of valid trials expected to be accomplished
-    Data.stimulus.maxExpDur = 1; %enter number of minutes allowed for experiment
+    Data.stimulus.numTrial = 10; %enter number of valid trials expected to be accomplished
+    Data.stimulus.maxExpDur = 10; %enter number of minutes allowed for experiment
     
     Data.stimulus.responseWindowDur=.5; 
     Data.stimulus.choiceDur=.5;
@@ -197,7 +197,7 @@ try
             Screen('Flip', windowRect);
             Data.trialTime(trial).FbackStartTime=datevec(now);            
             %% Collect eye tracking data
-            [leftEyeAll, rightEyeAll, timeStampAll] = DataCollect(0.5,0.001);
+            [leftEyeAll, rightEyeAll, timeStampAll] = DataCollect(0.5,0.01);
             if ( etime(datevec(now),Data.trialTime(trial).FbackStartTime) < Data.stimulus.feedbackDur)  
             [lefteye, righteye, timestamp, trigSignal] = tetio_readGazeData;
             
@@ -211,9 +211,9 @@ try
             timeStampAll = vertcat(timeStampAll, timestamp(:,1));
             end
             
-            Data.gazeL(n) = leftEyeAll;
-            Data.gazeR(n) = rightEyeAll;
-            Data.gazeT(n) = timeStampAll;
+            Data.gazeL = leftEyeAll;
+            Data.gazeR = rightEyeAll;
+            Data.gazeT = timeStampAll;
             
             %             csvwrite('gazedataleft.csv', leftEyeAll);
             %             csvwrite('gazedataright.csv', rightEyeAll);
@@ -223,14 +223,32 @@ try
             Data.trialTime(trial).FbackDuration=etime(datevec(now),Data.trialTime(trial).FbackStartTime);
             Data.trialTime(trial).FbackEndTime=datevec(now); 
             %% Check gazedata validity, abandon trial if invalid
-            [ValidCount, VisMatrix, Matrix] = gazevaliditycheck(Data.gazeL(n),Data.gazeR(n));
-            Data.gazeMatrix(n).Matrix = Matrix;
-            if (ValidCount/2) > (length(Gaze)*0.3)
+            [VisMatrix, Matrix, FixRatio,ValidCount,ValidRatio] = gazevaliditycheck(leftEyeAll,rightEyeAll);
+            Data.gazeMatrix(trial).Matrix = Matrix;
+            % check fixation ratio
+            Data.FixRatio(trial) = FixRatio
+            Data.ValidCount(trial) = ValidCount(1,1)
+            if FixRatio <= 0.5
+                FixValidityCode = 1;
+            else
+                FixValidityCode = 0;
+            end
+            Data.FixValidityCode(trial) = FixValidityCode;
+            Data.ValidRatio(trial) = ValidRatio;
+            if round(ValidRatio) > 0.1
+                ValidityCountCheck = 1;
+            else
+                ValidityCountCheck = 0;
+            end
+            
+            Data.ValidityCountCheck(trial) = ValidityCountCheck;
+            
+%             Data.ValidCheck(trial).ValidityCode = ValidityCode
+            if FixValidityCode + ValidityCountCheck == 2
                 Data.choice(trial) = Data.choice(trial);
             else
-                Data.choice(trial)= nan;
+                Data.choice(trial) = nan;
             end
-
             %% ITI delay
             Screen('FillOval', windowRect,white,[window(3)/2-20 window(4)/2-20 window(3)/2+20 window(4)/2+20]);
             Screen('Flip', windowRect);
@@ -241,7 +259,6 @@ try
             else
                 WaitSecs(Data.stimulus.ITIshort);
             end
-            
             %% Clock
             Data.trialTime(trial).TrialEndTime=datevec(now);
             Data.trialTime(trial).TrialDuration=etime(datevec(now),Data.trialTime(trial).TrialStartTime);
@@ -496,59 +513,68 @@ end
 %  Below starts the validity check function  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [ValidCount, VisMatrix, Matrix] = gazevaliditycheck(Gaze)
-Gaze(:,1) = Data.gazeL(:,7);
-            Gaze(:,3) = Data.gazeL(:,8);
-            Gaze(:,2) = Data.gazeR(:,7);
-            Gaze(:,4) = Data.gazeR(:,8);
-            
-        
-            Gaze(Gaze(:,1) < 0, :)=[];
-            Gaze(Gaze(:,2) < 0, :)=[];
-            Gaze(Gaze(:,3) < 0, :)=[];
-            Gaze(Gaze(:,4) < 0, :)=[];
-            
-            Gaze(:,1:2) = round(Gaze(:,1:2)*1920);
-            Gaze(:,3:4) = round(Gaze(:,3:4)*1080);
-            
-            Gaze(Gaze(:,1) > 1920, :)=[];
-            Gaze(Gaze(:,2) > 1920, :)=[];
-            Gaze(Gaze(:,3) > 1080, :)=[];
-            Gaze(Gaze(:,4) > 1080, :)=[];
-            
-            Matrix=zeros(1920,1080);
-            VisMatrix = zeros(1920,1080);
-            for i = 1:length(Gaze)
-                xl = Gaze(i,1);
-                yl = Gaze(i,3);
-                xr = Gaze(i,2);
-                yr = Gaze(i,4);
-                Matrix(xl,yl) = Matrix(xl,yl) + 1;
-                Matrix(xr,yr) = Matrix(xr,yr) + 1;
-                if ((xl + 3) && (xr + 3) <= 1920) && ((yl + 3)&&(yr + 3)<=1080) && ((xl - 3) && (xr - 3) > 0) && ((yl - 3)&&(yr - 3)>0)
-                    VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) = VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) + 1;
-                    VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) = VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) + 1;
-                else
-                    VisMatrix(xl,yl) = VisMatrix(xl,yl) + 1;
-                    VisMatrix(xr,yr) = VisMatrix(xr,yr) + 1;
-                end
-            end
-                Vind = find(Matrix >= 1);
-                
-            % valid vision field
-            r=100;
-            C = Ellipse(r,r*0.5*pi);
-            Csize = size(C);
-            CirMatrix = zeros(1920,1080);
-            % find coordinates on Matrix to place circle at
-            x1 = 1920/2-floor(Csize(1)/2)+1;
-            x2 = 1920/2+ceil(Csize(1)/2);
-            y1 = 1080/2-floor(Csize(2)/2)+1;
-            y2 = 1080/2+ceil(Csize(2)/2);
-            % Place circle into Matrix
-            CirMatrix(x1:x2,y1:y2) = C;
-            Cind = find(CirMatrix == 1);
-            
-            % Validity check
-            ValidCount = size(intersect(Vind,Cind));
-            end
+function [VisMatrix, Matrix, FixRatio,ValidCount,ValidRatio] = gazevaliditycheck(leftEyeAll,rightEyeAll)
+Gaze(:,1) = leftEyeAll(:,7);
+Gaze(:,3) = leftEyeAll(:,8);
+Gaze(:,2) = rightEyeAll(:,7);
+Gaze(:,4) = rightEyeAll(:,8);
+
+% Gaze(:,1) = Data.gazeL(:,7);
+% Gaze(:,3) = Data.gazeL(:,8);
+% Gaze(:,2) = Data.gazeR(:,7);
+% Gaze(:,4) = Data.gazeR(:,8);
+
+Fix = (length(find(Gaze(:,1) < 0))/length(Gaze(:,1)));
+FixRatio = mean(Fix,'all');
+    
+    
+Gaze(Gaze(:,1) < 0, :)=[];
+Gaze(Gaze(:,2) < 0, :)=[];
+Gaze(Gaze(:,3) < 0, :)=[];
+Gaze(Gaze(:,4) < 0, :)=[];
+
+Gaze(:,1:2) = round(Gaze(:,1:2)*1920);
+Gaze(:,3:4) = round(Gaze(:,3:4)*1080);
+
+Gaze(Gaze(:,1) > 1920, :)=[];
+Gaze(Gaze(:,2) > 1920, :)=[];
+Gaze(Gaze(:,3) > 1080, :)=[];
+Gaze(Gaze(:,4) > 1080, :)=[];
+
+Matrix=zeros(1920,1080);
+VisMatrix = zeros(1920,1080);
+for i = 1:length(Gaze)
+    xl = Gaze(i,1);
+    yl = Gaze(i,3);
+    xr = Gaze(i,2);
+    yr = Gaze(i,4);
+    Matrix(xl,yl) = Matrix(xl,yl) + 1;
+    Matrix(xr,yr) = Matrix(xr,yr) + 1;
+    if ((xl + 3) && (xr + 3) <= 1920) && ((yl + 3)&&(yr + 3)<=1080) && ((xl - 3) && (xr - 3) > 0) && ((yl - 3)&&(yr - 3)>0)
+        VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) = VisMatrix((xl-3):(xl+3),(yl-3):(yl+3)) + 1;
+        VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) = VisMatrix((xr-3):(xr+3),(yr-3):(yr+3)) + 1;
+    else
+        VisMatrix(xl,yl) = VisMatrix(xl,yl) + 1;
+        VisMatrix(xr,yr) = VisMatrix(xr,yr) + 1;
+    end
+end
+Vind = find(Matrix >= 1);
+
+% valid vision field
+r=50;
+C = Ellipse(r,r*0.5*pi);
+Csize = size(C);
+CirMatrix = zeros(1920,1080);
+% find coordinates on Matrix to place circle at
+x1 = 1920/2-floor(Csize(1)/2)+1;
+x2 = 1920/2+ceil(Csize(1)/2);
+y1 = 1080/2-floor(Csize(2)/2)+1;
+y2 = 1080/2+ceil(Csize(2)/2);
+% Place circle into Matrix
+CirMatrix(x1:x2,y1:y2) = C;
+Cind = find(CirMatrix == 1);
+
+ValidCount = size(intersect(Vind,Cind));
+ValidRatio = (ValidCount(1,1)*0.5 / length(Gaze(:,1)));
+
+end
