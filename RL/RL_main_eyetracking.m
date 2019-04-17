@@ -4,7 +4,7 @@ clear;
 prompt = 'What is the observer number?';
 observer = input(prompt);
 %% Calibrating Eye Tracker
-% addpath('C:\Program Files\MATLAB\R2019a\toolbox\tobiisdk\tetio')
+addpath('C:\Program Files\MATLAB\R2019a\toolbox\tobiisdk\tetio')
 addpath('eye-tracking');
 addpath('eye-tracking/functions');
 addpath('eye-tracking/tetio');  
@@ -59,7 +59,6 @@ disp('Calibration workflow stopped');
 
 %% 0. If no argument is used, run practice and abort
 if exist('observer', 'var')
-  tetio_startTracking;
   RL_WM_Practice_eyetracking(observer);
   
   % leave the stop tracking here for now, change location depend on

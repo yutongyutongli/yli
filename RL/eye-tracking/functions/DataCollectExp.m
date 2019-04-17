@@ -1,4 +1,4 @@
-function [leftEyeAll, rightEyeAll, timeStampAll] = DataCollect(durationInSeconds,pauseTimeInSeconds)
+function [ExpleftEyeAll, ExprightEyeAll, ExptimeStampAll] = DataCollectExp(durationInSeconds,pauseTimeInSeconds )
 %DATACOLLECT collects the data from the eye tracker
 % This function is used to collect the incoming data from the tobii eye tracker.
 %     
@@ -11,24 +11,24 @@ function [leftEyeAll, rightEyeAll, timeStampAll] = DataCollect(durationInSeconds
 %         rightEyeAll:EyeArray corresponding to the right eye.
 %         timeStampAll : timestamp of the readings
 
-leftEyeAll = [];
-rightEyeAll = [];
-timeStampAll = [];
+ExpleftEyeAll = [];
+ExprightEyeAll = [];
+ExptimeStampAll = [];
 
 for i = 1:(durationInSeconds)
     
      pause(pauseTimeInSeconds);
     
-    [lefteye, righteye, timestamp, trigSignal] = tetio_readGazeData;
+    [Explefteye, Exprighteye, Exptimestamp, ExptrigSignal] = tetio_readGazeData_Exp;
     
-    if isempty(lefteye)
+    if isempty(Explefteye)
         continue;
     end
     
-    numGazeData = size(lefteye, 2);
-    leftEyeAll = vertcat(leftEyeAll, lefteye(:, 1:numGazeData));
-    rightEyeAll = vertcat(rightEyeAll, righteye(:, 1:numGazeData));
-    timeStampAll = vertcat(timeStampAll, timestamp(:,1));
+    ExpnumGazeData = size(Explefteye, 2);
+    ExpleftEyeAll = vertcat(ExpleftEyeAll, Explefteye(:, 1:ExpnumGazeData));
+    ExprightEyeAll = vertcat(ExprightEyeAll, Exprighteye(:, 1:ExpnumGazeData));
+    ExptimeStampAll = vertcat(ExptimeStampAll, Exptimestamp(:,1));
     
 end
 
