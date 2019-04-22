@@ -25,8 +25,8 @@ filename2=fullfile(datadirname,['ValidTrials' num2str(observer)]);
 figfilename= fullfile(datadirname,['Fig' num2str(observer)]);
 try
     %% Data struct setup
-    Data.stimulus.numTrial = 3; %enter number of valid trials expected to be accomplished
-    Data.stimulus.maxExpDur = 1; %enter number of minutes allowed for experiment
+    Data.stimulus.numTrial = 120; %enter number of valid trials expected to be accomplished
+    Data.stimulus.maxExpDur = 20; %enter number of minutes allowed for experiment
     
     Data.stimulus.responseWindowDur=.5;
     Data.stimulus.choiceDur=.5;
@@ -39,9 +39,7 @@ try
     Data.choice = nan;
     Data.reward = nan;
     
-    leftEyeAll = [];
-    rightEyeAll = [];
-    timeStampAll = [];
+    
     %% Initiate data matrix; set alpha level and depth
     %data = [];
     data(1,1:2) = nan;
@@ -73,12 +71,11 @@ try
     %% Introduction screen
     Screen('TextSize', windowRect, 30);
     % This is our intro text. The '\n' sequence creates a line-feed:
-    IntroText = ['In this experiment you are asked to make choices\n' ...
+    IntroText = ['In this experiment you are asked to make choices\n\n' ...
         'given two rectangles on the screen.\n\n' ...
-        '  Press  1  if you want to choose the left one.\n' ...
-        '  Press  2  if you want to choose the right one.\n' ...
-        'You will begin with ' num2str(Data.stimulus.numTrial) ' training trials\n\n' ...
-        '      (Press any key to start training)\n' ];
+        '  Press  1  if you want to choose the left one.\n\n' ...
+        '  Press  2  if you want to choose the right one.\n\n' ...
+        '      (Press any key to start)\n' ];
     % Draw 'myText', centered in the display window:
     DrawFormattedText(windowRect, IntroText, 'center', 'center', white);
     % Show the drawn text at next display refresh cycle:
@@ -86,6 +83,7 @@ try
     % Wait for key stroke. This will first make sure all keys are
     % released, then wait for a keypress and release:
     KbWait([], 3);
+    tic;
     tetio_startTracking;
     Data.ExpStartTime=datevec(now);
     n = 1; % Number(n) increment, for the full choice history
@@ -98,7 +96,9 @@ try
             Gaze = [];
             OnScreen = [];
             OnScreenRatio = [];
-            
+            leftEyeAll = [];
+            rightEyeAll = [];
+            timeStampAll = [];
             %% Generate correct ans with matching pannies algorithm
             [computerChoice,pComputerRight,biasInfo]=matching_pennies(data,maxdepth,alpha);
             Data.CompChoice(trial) = computerChoice;
@@ -227,17 +227,17 @@ try
             RandITI = randi(100);
             if RandITI > 50
                 WaitSecs(Data.stimulus.ITIlong);
+                Data.trialTime(trial).ITIDuration = Data.stimulus.ITIlong;
             else
                 WaitSecs(Data.stimulus.ITIshort);
+                Data.trialTime(trial).ITIDuration = Data.stimulus.ITIshort;
             end
             Data.trialTime(trial).ITIEndTime=datevec(now);
-            Data.trialTime(trial).ITIDuration=etime(datevec(now),Data.trialTime(trial).ITIStartTime);
             %% Clock
-            
-            Data.trialTime(trial).TrialEndTime=datevec(now);
-            Data.trialTime(trial).TrialDuration=etime(datevec(now),Data.trialTime(trial).TrialStartTime);
-            Data.trialTime(trial).elapsedTimeExp=etime(datevec(now),Data.ExpStartTime);
-            %% collect eyetracking data
+            Data.trialTime(trial).TrialEndTime=datevec(now); % clock for trial
+            Data.trialTime(trial).TrialDuration=etime(datevec(now),Data.trialTime(trial).TrialStartTime); % clock for trial
+            Data.trialTime(trial).elapsedTimeExp=etime(datevec(now),Data.ExpStartTime); % clock for experiment time stamp
+            %% collect eyetracking data per trial
             [leftEyeAll, rightEyeAll, timeStampAll] = DataCollect(Data.trialTime(trial).TrialDuration,0.01);
             if (etime(datevec(now),Data.trialTime(trial).TrialStartTime)<Data.trialTime(trial).TrialDuration)
                 [lefteye, righteye, timestamp, trigSignal] = tetio_readGazeData;
@@ -252,58 +252,71 @@ try
                 timeStampAll = vertcat(timeStampAll, timestamp(:,1));
             end
             
-            % Store gaze data by trial 
+            % Store gaze data by trial
             Data.gazeAll(trial).gazeL = leftEyeAll;
             Data.gazeAll(trial).gazeR = rightEyeAll;
             Data.gazeAll(trial).gazeT = timeStampAll;
             
-            % Check gazedata validity of the whole trial  
-            [VisMatrix1, Matrix1, FixRatio1,ValidCount1,ValidRatio1,OnScreenRatio1] = ...
-                gazevaliditycheck(Data.gazeAll(trial).gazeL,Data.gazeAll(trial).gazeR);
-            Data.gazeData(trial).VisMatrixTrial = VisMatrix1;
-            Data.gazeData(trial).MatrixTrial = Matrix1;
-            Data.gazeData(trial).FixRatioTrial = FixRatio1;
-            Data.gazeData(trial).FixValidityCodeTrial = FixValidityCode1;
-            Data.gazeData(trial).OnScreenRatioTrial = OnScreenRatio1;
-            Data.gazeData(trial).ValidCountTrial = ValidCount1;
-            Data.gazeData(trial).ValidRatioTrial = ValidRatio1;
+%             % Check gazedata validity of the whole trial
+%             [VisMatrix1, Matrix1, FixRatio1,ValidCount1,ValidRatio1,OnScreenRatio1] = ...
+%                 gazevaliditycheck(Data.gazeAll(trial).gazeL,Data.gazeAll(trial).gazeR);
+%             Data.gazeAll(trial).VisMatrixTrial = VisMatrix1;
+%             Data.gazeAll(trial).MatrixTrial = Matrix1;
+%             Data.gazeAll(trial).FixRatioTrial = FixRatio1;
+%             if FixRatio1 <= 0.5  % increase the number here, if current ratio is too strict for subject
+%                 FixValidityCode1 = 1;
+%             else
+%                 FixValidityCode1 = 0;
+%             end
+%             Data.gazeAll(trial).FixValidityCodeTrial = FixValidityCode1;
+%             Data.gazeAll(trial).OnScreenRatioTrial = OnScreenRatio1;
+%             Data.gazeAll(trial).ValidCountTrial = ValidCount1;
+%             Data.gazeAll(trial).ValidRatioTrial = ValidRatio1;
             
-            % Extract feedback frame data
-            IndStart = (Data.trialTime(trial).ITIDuration + Data.stimulus.feedbackDur)*60;
-            IndEnd = 
-            % Check gazedata validity of feedback frame
-            [VisMatrix, Matrix, FixRatio,ValidCount,ValidRatio,OnScreenRatio] = ...
-                gazevaliditycheck(Data.gazeAll(trial).gazeL,Data.gazeAll(trial).gazeR); 
-            Data.gazeData(trial).VisMatrix = VisMatrix;
-            Data.gazeData(trial).MatrixFb = Matrix;
+%             % Extract feedback frame datal
+%             Data.gazeFix(trial).Max = length(Data.gazeAll(1).gazeL(:,1));
+%             Data.gazeFix(trial).IndStart = Data.gazeFix(trial).Max - ((Data.trialTime(trial).ITIDuration + Data.stimulus.feedbackDur)*60);
+%             Data.gazeFix(trial).IndEnd = Data.gazeFix(trial).Max - (Data.trialTime(trial).ITIDuration*60);
             
-            % check fixation ratio
-            Data.gazeData(trial).FixRatioFb = FixRatio; % invalid if ~1
-            if FixRatio <= 0.5  % increase the number here, if current ratio is too strict for subject
-                FixValidityCode = 1;
-            else
-                FixValidityCode = 0;
-            end
-            Data.gazeData(trial).FixValidityCodeFb = FixValidityCode;
+%             leftEyeAll
+%             rightEyeAll
+%             leftEyeAll(IndStart:IndEnd,:)
+%             rightEyeAll(IndStart:IndEnd,:)
+            toc 
             
-            % check for ratio of gaze on screen
-            Data.gazeData(trial).OnScreenRatioFb = OnScreenRatio;
-            if OnScreenRatio > 0.5
-                OnScreenCode = 1;
-            else
-                OnScreenCode = 0;
-            end
-            Data.gazeData(trial).OnScreenCodeFb = OnScreenCode;
-            
-            % check for ratio of gaze within the circle
-            Data.gazeData(trial).ValidCountFb = ValidCount;
-            Data.gazeData(trial).ValidRatioFb = ValidRatio;
-            if round(ValidRatio) > 0.1
-                CountValidityCode = 1;
-            else
-                CountValidityCode = 0;
-            end
-            Data.gazeData(trial).CountValidityCodeFb = CountValidityCode;
+%             % Check gazedata validity of feedback frame
+%             [VisMatrix, Matrix, FixRatio,ValidCount,ValidRatio,OnScreenRatio] = ...
+%                 gazevaliditycheck(leftEyeAll(IndStart:IndEnd,:), rightEyeAll(IndStart:IndEnd,:));
+%             Data.gazeFix(trial).VisMatrix = VisMatrix;
+%             Data.gazeFix(trial).MatrixFb = Matrix;
+%             
+%             % check fixation ratio
+%             Data.gazeFix(trial).FixRatioFb = FixRatio; % invalid if ~1
+%             if FixRatio <= 0.5  % increase the number here, if current ratio is too strict for subject
+%                 FixValidityCode = 1;
+%             else
+%                 FixValidityCode = 0;
+%             end
+%             Data.gazeFix(trial).FixValidityCodeFb = FixValidityCode;
+%             
+%             % check for ratio of gaze on screen
+%             Data.gazeFix(trial).OnScreenRatioFb = OnScreenRatio; % invalid if ~0
+%             if OnScreenRatio > 0.5
+%                 OnScreenCode = 1;
+%             else
+%                 OnScreenCode = 0;
+%             end
+%             Data.gazeFix(trial).OnScreenCodeFb = OnScreenCode;
+%             
+%             % check for ratio of gaze within the circle
+%             Data.gazeFix(trial).ValidCountFb = ValidCount;
+%             Data.gazeFix(trial).ValidRatioFb = ValidRatio; % invalid if ~0
+%             if round(ValidRatio) > 0.2
+%                 CountValidityCode = 1;
+%             else
+%                 CountValidityCode = 0;
+%             end
+%             Data.gazeFix(trial).CountValidityCodeFb = CountValidityCode;
             
             % Rules for abandoning trials:
             % FixValidityCode == 1 : when the person opens his eyes and
@@ -316,16 +329,28 @@ try
             % the person opens eyes, face the screen, look withing the
             % screen area and spent most of the time looking at the
             % fixation
-            
-            if FixValidityCode == 1
-                Data.choice(trial) = Data.choice(trial);
-            else
-                Data.choice(trial) = nan;
-            end
-            
+%             
+%             if FixValidityCode1 == 1
+%                 Data.choice(trial) = Data.choice(trial);
+%             else
+%                 Data.choice(trial) = nan;
+%             end
+%             
+%             Data.gazeFix(trial).Sum = FixValidityCode + OnScreenCode + CountValidityCode;            
+%             if Data.gazeFix(trial).Sum == 3
+%                 Data.gazeFix(trial).Code = 1;
+%             else
+%                 Data.gazeFix(trial).Code = 0;
+%             end
+%             
             %% Add to choice and reward history
             data(1:n,1)=Data.choice(:);
             data(1:n,2)=Data.reward(:);
+            %% Data visualization
+            Data.sum(n).miss=sum(isnan(Data.choice(:)));
+            Data.sum(n).left=sum(Data.choice(:)==0);
+            Data.sum(n).right=sum(Data.choice(:)==1);
+            Data.sum(n).reward=sum(rmmissing(Data.reward(:)));
             %% remove invalid trials and count number of valid trials
             validtrials = sum(~isnan(data(:,1)));
             if validtrials >= 1
@@ -333,39 +358,38 @@ try
             else
                 data = nan(1,2);
             end
-            %% Data visualization
-            Data.sum(n).miss=sum(isnan(Data.choice(:)));
-            Data.sum(n).left=sum(Data.choice(:)==0);
-            Data.sum(n).right=sum(Data.choice(:)==1);
-            Data.sum(n).reward=sum(rmmissing(Data.reward(:)));
-            % Gaze heat map per trial
-            Fig.TrialFbackGaze(n) = figure;
-            axis ([0 1920 0 1080])
-            imagesc(VisMatrix)
-            axis ij
+            %% Gaze heat map per trial
+%             Fig.TrialGaze(trial).Heatmap = figure(trial);
+%             axis ([0 1920 0 1080]);
+%             imagesc(VisMatrix);
+%             axis ij;
             
+%             Fig.FbHeatmap(trial) = figure(trial);
+%             axis ([0 1920 0 1080])
+%             imagesc(VisMatrix1)
+%             axis ij
             %% Increment, for the full choice history
             n = n+1;
+            
+            
         else
             break;
             
         end % end of trials loop
-        
-        
     end % end of experimen time control while loop
     Data.ExpEndTime=datevec(now);
     Data.ExpDur=etime(datevec(now),Data.ExpStartTime);
     %% plot cumulative choice and reward history graph
     Time = struct2dataset(Data.trialTime(:));
     Result = struct2dataset(Data.sum(:));
-    x=Time(:,19);
-    reward=Result(:,4);
+    x=Time(:,'elapsedTimeExp');
+    reward=Result(:,'reward');
     Fig.ExpChoice = figure;
-    plot(x,reward,'color',[0.8500 0.3250 0.0980])
+    plot(x,reward,'color',[0.8500 0.3250 0.0980]);
     hold on
-    plot(x,Result(:,1),'color',[0 0.4470 0.7410])
-    plot(x,Result(:,2),'color',[0.4660 0.6740 0.1880])
-    plot(x,Result(:,3),'color',[0.6350 0.0780 0.1840])
+    plot(x,Result(:,'miss'),'color',[0 0.4470 0.7410]);
+    plot(x,Result(:,'left'),'color',[0.4660 0.6740 0.1880]);
+    plot(x,Result(:,'right'),'color',[0.6350 0.0780 0.1840]);
     drawnow
     title('Cumulative Choice and Reward vs. Elapsed Time')
     legend('Reward','Missed','Left','Right')
@@ -374,6 +398,7 @@ try
     save(Data.filename,'Data')
     save(filename2,'data')
     save(figfilename,'Fig')
+    %% Display result
     Screen('TextSize', windowRect, 36);
     % This is our intro text. The '\n' sequence creates a line-feed:
     IntroText = ['This is the end.\n\nYou won ' num2str(sum(data(:,2))*5) ' points.\n\nThanks for participating!'];
